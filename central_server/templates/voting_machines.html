@@ -1,0 +1,71 @@
+{% extends 'layout.html' %}
+
+{% block title %}Voting Machines {% endblock title %}
+
+{% block content %}
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Port</th>
+      <th scope="col">Last Checked</th>
+      <th scope="col">Status</th>
+      <th scope="col"></th>
+    </tr>
+  </thead>
+  <tbody>
+  	{% for machine in voting_machines %}
+  		<form method="POST", action=''>
+  		{{ form.hidden_tag() }}
+  		<input type="hidden" name="type" value="remove"/>
+  		<tr>
+  			<th scope="row">{{machine.name}}</th>
+  			<td>{{machine.port}}</td>
+  			<td>{{machine.last_checked}}</td>
+  			<td>{{'Up' if machine.status else 'Down'}}</td>
+  			<td>{{ form2.submit(class="btn btn-outline-info") }}</td>
+  			<input type="hidden" name="rport" value='{{machine.port}}'/>
+  		</tr>
+  		</form>
+  	{% endfor %}
+  </tbody>
+</table>
+	<form method="POST", action="">
+		{{ form.hidden_tag() }}
+		<input type="hidden" name="type" value="add"/>
+		<fieldset class="form-group">
+			<legend class="border-bottom mb-4">Add Voting Machine</legend>
+			<div class="form-group">
+				{{ form.name.label(class="form-control-label") }}
+
+				{% if form.name.errors %}
+					{{ form.name(class="form-control form-control-lg is-invalid") }}
+					<div class="invalid-feedback">
+						{% for error in form.name.errors %}
+						<span>{{ error }}</span>
+						{% endfor %}
+					</div>
+				{% else %}
+					{{ form.name(class="form-control form-control-lg") }}
+				{% endif %}
+			</div>
+			<div class="form-group">
+				{{ form.port.label(class="form-control-label") }}
+				{% if form.port.errors %}
+					{{ form.port(class="form-control form-control-lg is-invalid") }}
+					<div class="invalid-feedback">
+						{% for error in form.port.errors %}
+						<span>{{ error }}</span>
+						{% endfor %}
+					</div>
+				{% else %}
+					{{ form.port(class="form-control form-control-lg") }}
+				{% endif %}
+			</div>
+		</fieldset>
+		<div class="form-group">
+			{{ form.submit(class="btn btn-outline-info") }}
+		</div>
+	</form>
+</div>
+{% endblock content %}

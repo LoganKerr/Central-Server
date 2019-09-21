@@ -14,5 +14,5 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
-from central_server.models import User, Voter, Candidate, Election
+from central_server.models import User, Voter, Candidate, Election, VotingMachine
 from central_server import routes

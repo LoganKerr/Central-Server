@@ -1,8 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_login import current_user
-from wtforms import StringField, PasswordField, SubmitField, BooleanField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional
-from central_server.models import User
+from central_server.models import User, VotingMachine
 
 class RegistrationForm(FlaskForm):
 	email = StringField('Email', validators=[DataRequired(), Email()])
@@ -32,3 +32,16 @@ class UpdateUserForm(FlaskForm):
 			user = User.query.filter_by(email=email.data).first()
 			if user:
 				raise ValidationError('Email address is taken')
+
+class AddVotingMachinesForm(FlaskForm):
+	name = StringField('Name', validators=[DataRequired()])
+	port = IntegerField('Port', validators=[DataRequired()])
+	submit = SubmitField('Submit')
+
+	def validate_port(self, port):
+		machine = VotingMachine.query.filter_by(port=port.data).first()
+		if machine:
+			raise ValidationError('Voting Machine with port already exists')
+
+class RemoveVotingMachineForm(FlaskForm):
+	submit = SubmitField('Remove')

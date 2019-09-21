@@ -1,8 +1,10 @@
 from flask import render_template, url_for, flash, redirect, request
 from central_server import app, db, bcrypt
-from central_server.forms import RegistrationForm, LoginForm, UpdateUserForm
-from central_server.models import User, Voter, Candidate, Election
+from central_server.forms import RegistrationForm, LoginForm, UpdateUserForm, AddVotingMachinesForm, RemoveVotingMachineForm
+from central_server.models import User, Voter, Candidate, Election, VotingMachine
 from flask_login import login_user, current_user, logout_user, login_required
+from datetime import datetime
+import requests
 
 @app.route("/")
 def home():
@@ -62,3 +64,42 @@ def profile():
 def logout():
 	logout_user()
 	return redirect(url_for('home'))
+
+@app.route("/voting_machines/", methods=['GET', 'POST'])
+def voting_machines():
+	form2 = RemoveVotingMachineForm()
+	form = AddVotingMachinesForm()
+	form_type = request.form.get('type')
+	print(form_type)
+	if form_type == "remove" and form2.validate_on_submit():
+		port = request.form.get('rport')
+		print(port)
+		voting_machine = VotingMachine.query.filter_by(port=int(port)).first()
+		print(voting_machine)
+		if voting_machine:
+			db.session.delete(voting_machine)
+			db.session.commit()
+			flash("Voting Machine Removed")
+		else:
+			flash("Voting Machine not found")
+	if form_type == "add" and form.validate_on_submit():
+		status = getStatusOfVM(int(form.port.data))
+		voting_machine = VotingMachine(name=form.name.data, port=int(form.port.data), last_checked=datetime.utcnow(), status=status)
+		db.session.add(voting_machine)
+		db.session.commit()
+		flash("Voting Machine Added")
+	voting_machines = VotingMachine.query.all()
+	for machine in voting_machines:
+		status = getStatusOfVM(machine.port)
+		machine.status = status
+		machine.last_checked = datetime.utcnow()
+	db.session.commit()
+	return render_template('voting_machines.html', voting_machines=voting_machines, form=form, form2=form2)
+
+def getStatusOfVM(port):
+	response = 0
+	try:
+		response = requests.get('http://localhost:'+str(port))
+	except requests.exceptions.RequestException as e:  # This is the correct syntax
+		print(e)
+	return response and response.ok
