@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+	<script src="{{ url_for('static', filename='js/jquery-3.4.1.min.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/bootstrap.js') }}"></script>
+
+    <title>{% block title %}{% endblock title %}</title>
+
+</head>
+<body>
+	<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+	  <a class="navbar-brand" href="{{ url_for('home') }}">Central Server</a>
+	  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+	    <span class="navbar-toggler-icon"></span>
+	  </button>
+
+	  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+	    <ul class="navbar-nav mr-auto">
+	      <li class="nav-item active">
+	        <a class="nav-link" href="{{ url_for('home') }}">Home<span class="sr-only">(current)</span></a>
+	      </li>
+	      {% if current_user.is_authenticated %}
+	      	<li class="nav-item active">
+		       <a class="nav-link" href="{{ url_for('profile') }}">Profile<span class="sr-only">(current)</span></a>
+		    </li>
+		    <li class="nav-item active">
+		    	<a class="nav-link" href="{{ url_for('logout') }}">Logout<span class="sr-only">(current)</span></a>
+		    </li>
+	      {% else %}
+		    <li class="nav-item active">
+		    	<a class="nav-link" href="{{ url_for('login') }}">Login<span class="sr-only">(current)</span></a>
+		    </li>
+		    <li class="nav-item active">
+		    	<a class="nav-link" href="{{ url_for('register') }}">Register<span class="sr-only">(current)</span></a>
+		    </li>
+	      {% endif %}
+	  </div>
+	</nav>
+
+    <div class="container">
+
+    	{% with messages = get_flashed_messages(with_categories=true) %}
+    		{% if messages %}
+    			{% for category, message in messages %}
+    				<div class="alert alert-{{ category }}">
+    					{{ message }}
+    				</div>
+    			{% endfor %}
+    		{% endif %}
+    	{% endwith %}
+
+    	{% block content %}{% endblock %}
+
+    </div> <!-- /container -->
+	
+</body>
+</html>

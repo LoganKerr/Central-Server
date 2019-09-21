@@ -1,0 +1,10 @@
+.DS_store
+bin/
+lib/
+pyvenv.cfg
+central_server/__pycache__
+central_server/site.db
+.Python
+.DS_Store
+site.db
+include/
