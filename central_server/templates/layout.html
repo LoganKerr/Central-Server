@@ -3,8 +3,10 @@
 <head>
 	<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
 	<script src="{{ url_for('static', filename='js/jquery-3.4.1.min.js') }}"></script>
 	<script src="{{ url_for('static', filename='js/bootstrap.js') }}"></script>
+	{% block scripts %}{% endblock scripts %}
 
     <title>{% block title %}{% endblock title %}</title>
 
@@ -30,6 +32,9 @@
 		    </li>
 		    <li class="nav-item active">
 		    	<a class="nav-link" href="{{ url_for('voting_machines') }}">Voting Machines<span class="sr-only">(current)</span></a>
+		    </li>
+		    <li class="nav-item active">
+		    	<a class="nav-link" href="{{ url_for('create_election') }}">Create Election<span class="sr-only">(current)</span></a>
 		    </li>
 	      {% else %}
 		    <li class="nav-item active">

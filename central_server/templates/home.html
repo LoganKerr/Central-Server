@@ -1,5 +1,51 @@
 {% extends "layout.html" %}
 
 {% block content %}
-	<h1>Hello World</h1>
+	<main role="main" class="container">
+    {% if elections["organizer"]|length == 0 and elections["candidate"]|length == 0 and elections["voter"]|length == 0 %}
+      <p>No elections found</p>
+    {% endif %}
+	  {% if elections["organizer"]|length > 0 %}
+      <div class="my-3 p-3 bg-white rounded box-shadow">
+        <h6 class="border-bottom border-gray pb-2 mb-0">Elections you are organizer on</h6>
+        {% for election in elections["organizer"] %}
+        <a href={{ url_for('election', id=election.id) }}>
+	        <div class="media text-muted pt-3 election-list-item">
+	          <p class="media-body pb-3 mb-0 small lh-125 border-bottom border-gray">
+	            <strong class="d-block text-gray-dark">{{ election.title }} - {{ "Open" if election.started and not election.ended else "Ended" if election.ended else "Not Started" }}</strong>
+	          </p>
+	        </div>
+	    </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if elections["candidate"]|length > 0 %}
+      <div class="my-3 p-3 bg-white rounded box-shadow ">
+        <h6 class="border-bottom border-gray pb-2 mb-0">Elections you are candidate on</h6>
+        {% for election in elections["candidate"] %}
+        <a href={{ url_for('election', id=election.id) }}>
+	        <div class="media text-muted pt-3 election-list-item">
+	          <p class="media-body pb-3 mb-0 small lh-125 border-bottom border-gray">
+	            <strong class="d-block text-gray-dark">{{ election.title }} - {{ "Open" if election.started and not election.ended else "Ended" if election.ended else "Not Started" }}</strong>
+	          </p>
+	        </div>
+	    </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if elections["voter"]|length > 0 %}
+      <div class="my-3 p-3 bg-white rounded box-shadow">
+        <h6 class="border-bottom border-gray pb-2 mb-0">Elections you are a voter on</h6>
+        {% for election in elections["voter"] %}
+        <a href={{ url_for('election', id=election.id) }}>
+		    <div class="media text-muted pt-3 election-list-item">
+		      <p class="media-body pb-3 mb-0 small lh-125 border-bottom border-gray">
+		        <strong class="d-block text-gray-dark">{{ election.title }} - {{ "Open" if election.started and not election.ended else "Ended" if election.ended else "Not Started" }}</strong>
+		      </p>
+		    </div>
+		</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </main>
 {% endblock content %}

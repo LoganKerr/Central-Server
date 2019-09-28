@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_login import current_user
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, IntegerField, FieldList
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, Optional
 from central_server.models import User, VotingMachine
 
@@ -45,3 +45,31 @@ class AddVotingMachinesForm(FlaskForm):
 
 class RemoveVotingMachineForm(FlaskForm):
 	submit = SubmitField('Remove')
+
+class CreateElectionForm(FlaskForm):
+	title = StringField('Title', validators=([DataRequired()]))
+	candidates = FieldList(StringField())
+	voters = FieldList(StringField())
+	submit = SubmitField('Create Election')
+
+	def validate_candidates(self, candidates):
+		if len(candidates) < 2:
+			raise ValidationError('Add at least one candidate')
+		for candidate in candidates.data:
+			user = User.query.filter_by(email=candidate).first()
+			if user == None:
+				raise ValidationError('Candidate not found with email: '+candidate)
+
+	def validate_voters(self, voters):
+		if len(voters) < 1:
+			raise ValidationError('Add at least one voter')
+		for voter in voters.data:
+			user = User.query.filter_by(email=voter).first()
+			if user == None:
+				raise ValidationError('Voter not found with email: '+voter)
+
+class OpenElectionForm(FlaskForm):
+	submit = SubmitField('Open Election')
+
+class CloseElectionForm(FlaskForm):
+	submit = SubmitField('Close Election')

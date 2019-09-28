@@ -19,7 +19,7 @@ class User(db.Model, UserMixin):
 	password = db.Column(db.String(60), nullable=False)
 	voters = db.relationship('Voter', backref='user', lazy=True)
 	organizers = db.relationship('Election', backref='organizer', lazy=True)
-	candidates = db.relationship('Election', backref='candidate', lazy=True)
+	candidates = db.relationship('Candidate', backref='candidate', lazy=True)
 
 	def __repr__(self):
 		return f"User:('{self.email}')"
@@ -29,22 +29,30 @@ class Voter(db.Model):
 	election_id = db.Column(db.Integer, db.ForeignKey('election.id'), nullable=False)
 	user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 	voted = db.Column(db.Boolean, nullable=False)
+	authentication_token = db.Column(db.String(128), nullable=False)
 
 	def __repr__(self):
-		return f"Voter:('{self.election_id}', '{self.user_id}', '{self.voted}')"
+		return f"Voter:('{self.election_id}', '{self.user_id}', '{self.voted}', '{self.authentication_token}')"
 
 class Candidate(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	election_id = db.Column(db.Integer, db.ForeignKey('election.id'), nullable=False)
 	user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-	winner = db.Column(db.Boolean, nullable=True)
+	winner = db.Column(db.Boolean, nullable=False, default=False)
+
+	def __repr__(self):
+		return f"Candidate:('{self.election_id}', '{self.user_id}', '{self.winner}')"
 
 class Election(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	title = db.Column(db.String(120), nullable=False)
 	organizer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-	open = db.Column(db.Boolean, nullable=False)
-	public_key = db.Column(db.Integer, nullable=False)
-	private_key = db.Column(db.Integer, nullable=False)
+	started = db.Column(db.Boolean, nullable=False, default=False)
+	ended = db.Column(db.Boolean, nullable=False, default=False)
+	public_key = db.Column(db.String(120), nullable=False)
+	private_key = db.Column(db.String(120), nullable=False)
 	voters = db.relationship('Voter', backref='election', lazy=True)
 	candidates = db.relationship('Candidate', backref='election', lazy=True)
+
+	def __repr__(self):
+		return f"Election:('{self.title}', '{self.organizer_id}', '{self.started}', '{self.ended}' '{self.public_key}')"

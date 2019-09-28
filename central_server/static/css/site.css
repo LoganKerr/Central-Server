@@ -1,0 +1,7 @@
+.election-list-item:hover {
+	background: rgba(204, 204, 204, .5);
+}
+
+.election-list-item {
+	color: black;
+}

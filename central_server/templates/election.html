@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+
+{% block title %}Election{% endblock title %}
+
+{% block content %}
+<div class="container">
+  <div class="jumbotron">
+    <h1>{{ election.title }}</h1>
+    <p>Organizer: {{ organizer.email }}</p>
+    <p>Status: {{ "Open" if election.started and not election.ended else "Ended" if election.ended else "Not Started" }}</p>
+    {% if organizer == current_user %}
+    	<form method="POST", action="">
+		  	{% if election.started and not election.ended %}
+		  		{{ close_form.hidden_tag() }}
+		  		<input type="hidden" name="type" value="close"/>
+		  		{{ close_form.submit(class="btn btn-outline-info") }}
+		  	{% elif not election.started %}
+		  		{{ open_form.hidden_tag() }}
+		  		<input type="hidden" name="type" value="open"/>
+		  		{{ open_form.submit(class="btn btn-outline-info") }}
+		  	{% endif %}
+	  	</form>
+  	{% endif %}
+  </div>
+  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#CandidateModal">Show Candidates</button>
+  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#VoterModal">Show Voters</button>
+  {% if election.started and not election.ended %}
+	  {% for voter in voters %}
+	  	{% if voter.User == current_user and not voter.Voter.voted %}
+	  		<form method="POST", action={{ voting_link }} class="mt-2">
+	  			<input type="hidden" name="voter" value='{{ voter.Voter.id}}'/>
+		  		<input type="hidden" name="election" value='{{ election.id }}'/>
+		  		<input type="hidden" name="authentication_token" value='{{ voter.Voter.authentication_token }}'/>
+		  		<button class="btn btn-primary" type="submit">Cast Vote</button>
+		  	</form>
+		{% endif %}
+	  {% endfor %}
+  {% endif %}
+  {% if election.ended %}
+	<table class="table mt-2">
+	  <thead>
+	    <tr>
+	      <th scope="col">Fingerprint</th>
+	      <th scope="col">Vote</th>
+	    </tr>
+	  </thead>
+	  <tbody>
+		<tr>
+			<td>Fingerprint</td>
+			<td>Vote</td>
+		</tr>
+	  </tbody>
+	</table>
+  {% else %}
+    <p class="mt-2">View votes here after election ends</p>
+  {% endif %}
+</div>
+<!-- Modal -->
+<div class="modal fade" id="CandidateModal" tabindex="-1" role="dialog" aria-labelledby="CandidateModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="CandidateModalLabel">Candidates</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group">
+		  	{% for candidate in candidates %}
+	  			<li class="list-group-item">{{ candidate.User.email }}</li>
+			{% endfor %}
+		</ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="VoterModal" tabindex="-1" role="dialog" aria-labelledby="VoterModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="VoterModalLabel">Voters</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <ul class="list-group">
+        	{% for voter in voters %}
+	  			<li class="list-group-item">{{ voter.User.email }}</li>
+  			{% endfor %}
+		</ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

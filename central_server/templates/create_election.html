@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/site.js') }}"></script>
+{% endblock scripts %}
+
+{% block title %}Create Election{% endblock title %}
+
+{% block content %}
+<div>
+	<form method="POST", action="">
+		{{ form.hidden_tag() }}
+		<fieldset class="form-group">
+			<legend class="border-bottom mb-4">Create Election</legend>
+			<div class="form-group">
+				{{ form.title.label(class="form-control-label") }}
+
+				{% if form.title.errors %}
+					{{ form.title(class="form-control form-control-lg is-invalid") }}
+					<div class="invalid-feedback">
+						{% for error in form.title.errors %}
+						<span>{{ error }}</span>
+						{% endfor %}
+					</div>
+				{% else %}
+					{{ form.title(class="form-control form-control-lg") }}
+				{% endif %}
+			</div>
+			<div class="form-group" id="candidatesDiv">
+				{{ form.candidates.label(class="form-control-label") }}
+				<button type="button" id="addNewCandidate" class="btn btn-outline-info">Add Candidate</button> 
+				{% if form.candidates.errors %}
+					<div class="invalid-feedback">
+						{% for error in form.candidates.errors %}
+						<span>{{ error }}</span>
+						{% endfor %}
+					</div>
+				{% endif %}
+				{{ form.candidates }}
+			</div>
+			<div class="form-group" id="votersDiv">
+				{{ form.voters.label }}
+				
+				<button type="button" id="addNewVoter" class="btn btn-outline-info">Add Voter</button>
+
+				{% if form.voters.errors %}
+					<div class="invalid-feedback">
+						{% for error in form.voters.errors %}
+						<span>{{ error }}</span>
+						{% endfor %}
+					</div>
+				{% endif %}
+				{{ form.voters }}
+			</div>
+		</fieldset>
+		<div class="form-group">
+			{{ form.submit(class="btn btn-outline-info") }}
+		</div>
+	</form>
+</div>
+{% endblock content %}
