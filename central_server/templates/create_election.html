@@ -26,9 +26,11 @@
 					{{ form.title(class="form-control form-control-lg") }}
 				{% endif %}
 			</div>
-			<div class="form-group" id="candidatesDiv">
-				{{ form.candidates.label(class="form-control-label") }}
-				<button type="button" id="addNewCandidate" class="btn btn-outline-info">Add Candidate</button> 
+			<div class="form-group" id="candidateDiv">
+				{{ form.candidates.label }}
+				
+				<button type="button" id="addNewCandidate" class="btn btn-outline-info">Add Candidate</button>
+
 				{% if form.candidates.errors %}
 					<div class="invalid-feedback">
 						{% for error in form.candidates.errors %}

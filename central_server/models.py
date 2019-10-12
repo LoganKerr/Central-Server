@@ -30,6 +30,8 @@ class Voter(db.Model):
 	user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 	voted = db.Column(db.Boolean, nullable=False)
 	authentication_token = db.Column(db.String(128), nullable=False)
+	verified = db.Column(db.Integer, nullable=False, default=False)
+	vote_exists = db.Column(db.Integer, nullable=False, default=False)
 
 	def __repr__(self):
 		return f"Voter:('{self.election_id}', '{self.user_id}', '{self.voted}', '{self.authentication_token}')"
@@ -38,10 +40,10 @@ class Candidate(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
 	election_id = db.Column(db.Integer, db.ForeignKey('election.id'), nullable=False)
 	user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-	winner = db.Column(db.Boolean, nullable=False, default=False)
+	votes = db.Column(db.Integer, nullable=False, default=0)
 
 	def __repr__(self):
-		return f"Candidate:('{self.election_id}', '{self.user_id}', '{self.winner}')"
+		return f"Candidate:('{self.election_id}', '{self.user_id}','{self.votes}')"
 
 class Election(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
@@ -49,8 +51,9 @@ class Election(db.Model):
 	organizer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 	started = db.Column(db.Boolean, nullable=False, default=False)
 	ended = db.Column(db.Boolean, nullable=False, default=False)
-	public_key = db.Column(db.String(120), nullable=False)
-	private_key = db.Column(db.String(120), nullable=False)
+	public_key = db.Column(db.String(1024), nullable=False)
+	private_key_p = db.Column(db.String(1024), nullable=False)
+	private_key_q = db.Column(db.String(1024), nullable=False)
 	voters = db.relationship('Voter', backref='election', lazy=True)
 	candidates = db.relationship('Candidate', backref='election', lazy=True)
 

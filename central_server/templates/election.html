@@ -1,6 +1,9 @@
 {% extends "layout.html" %}
 
 {% block title %}Election{% endblock title %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/paillier.js') }}"></script>
+{% endblock scripts %}
 
 {% block content %}
 <div class="container">
@@ -18,12 +21,41 @@
 		  		{{ open_form.hidden_tag() }}
 		  		<input type="hidden" name="type" value="open"/>
 		  		{{ open_form.submit(class="btn btn-outline-info") }}
-		  	{% endif %}
+        {% elif election.ended %}
+          {% if winners|length == 1 %}
+            Winner: {{ winners[0][0].User.email }}
+          {% else %}
+            Winners:
+            <ul>
+              {% for winner in winners %}
+                <li>{{ winner.User.email }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        {% endif %}
 	  	</form>
   	{% endif %}
   </div>
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#CandidateModal">Show Candidates</button>
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#VoterModal">Show Voters</button>
+  <button type="button" class="btn btn-primary" onclick=VerifyResult()>Verify</button>
+  <br>
+  <br>
+  <p>
+    Percent of votes verified: {{ percent_verified }}%
+  </p>
+  {% if election.ended and user_voted and not user_voted.verified %}
+    <form method="POST", action="">
+      {{ verify_vote_form.hidden_tag() }}
+      <input type="hidden" name="type" value="verify"/>
+      <input type="hidden" name="election" value='{{ election.id }}'/>
+      <input type="hidden" name="user" value='{{ current_user.id }}'/>
+      <input type="hidden" name="voter" value='{{ user_voted.id }}'/>
+      <input type="hidden" name="authentication_token" value='{{ user_voted.authentication_token }}'/>
+      {{ verify_vote_form.vote_exists(class="btn btn-success") }}
+      {{ verify_vote_form.vote_not_exists(class="btn btn-danger") }}
+    </form>
+  {% endif %}
   {% if election.started and not election.ended %}
 	  {% for voter in voters %}
 	  	{% if voter.User == current_user and not voter.Voter.voted %}
@@ -37,24 +69,71 @@
 	  {% endfor %}
   {% endif %}
   {% if election.ended %}
-	<table class="table mt-2">
-	  <thead>
-	    <tr>
-	      <th scope="col">Fingerprint</th>
-	      <th scope="col">Vote</th>
-	    </tr>
-	  </thead>
-	  <tbody>
-		<tr>
-			<td>Fingerprint</td>
-			<td>Vote</td>
-		</tr>
-	  </tbody>
-	</table>
+  	<table class="table mt-2">
+  	  <thead>
+  	    <tr>
+  	      <th scope="col">Fingerprint</th>
+          {% for candidate in candidates %}
+  	         <th scope="col">{{ candidate.User.email }}</th>
+          {% endfor %}
+  	    </tr>
+  	  </thead>
+  	  <tbody>
+        {% for fingerprint in votes.items() %}
+      		<tr>
+      			<td style="word-wrap">{{ fingerprint[0] }}</td>
+            {% for vote in fingerprint[1].items() %}
+      			   <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">{{ vote[1] }}</td>
+            {% endfor %}
+      		</tr>
+        {% endfor %}
+        <tr>
+          <td>Total votes: {{ num_votes }}</td>
+            {% for candidate in candidates %}
+              <td>{{ candidate.Candidate.votes }}</td>
+            {% endfor %}
+        </tr>
+  	  </tbody>
+  	</table>
   {% else %}
     <p class="mt-2">View votes here after election ends</p>
   {% endif %}
 </div>
+
+<script>
+  n_str = '{{ election.public_key }}';
+  nonces = {{ nonces | safe }};
+  tally = {{ tally | safe }};
+  candidates = {{ candidate_dict | safe }};
+  numBits = 128;
+  function VerifyResult()
+  {
+    valid = true
+    n = new BigInteger(n_str);
+    pub = new paillier.publicKey(numBits, n);
+    for (candidate in candidates)
+    {
+      votes_cand = candidates[candidate]
+      tally_cand = new BigInteger(tally[candidate]);
+      nonce_cand = new BigInteger(nonces[candidate])
+      encrypted = pub.encryptWithNonce(nbv(votes_cand), nonce_cand);
+      if (encrypted.toString() != tally_cand)
+      {
+        valid = false;
+      }
+    }
+    if (valid)
+    {
+      alert("Published results are valid");
+    }
+    else
+    {
+      alert("ERROR: Published results are not valid");
+    }
+  }
+</script>
+
+
 <!-- Modal -->
 <div class="modal fade" id="CandidateModal" tabindex="-1" role="dialog" aria-labelledby="CandidateModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">

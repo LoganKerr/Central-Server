@@ -49,12 +49,17 @@ class RemoveVotingMachineForm(FlaskForm):
 class CreateElectionForm(FlaskForm):
 	title = StringField('Title', validators=([DataRequired()]))
 	candidates = FieldList(StringField())
+	#candidate_1 = StringField('Candidate 1', validators=([DataRequired()]))
+	#candidate_2 = StringField('Candidate 2', validators=([DataRequired()]))
 	voters = FieldList(StringField())
 	submit = SubmitField('Create Election')
 
 	def validate_candidates(self, candidates):
 		if len(candidates) < 2:
-			raise ValidationError('Add at least one candidate')
+			raise ValidationError('Add at least 2 candidates')
+		for candidate in candidates.data:
+			if candidates.data.count(candidate) > 1:
+				raise ValidationError('Do not have duplicate candidates')
 		for candidate in candidates.data:
 			user = User.query.filter_by(email=candidate).first()
 			if user == None:
@@ -73,3 +78,7 @@ class OpenElectionForm(FlaskForm):
 
 class CloseElectionForm(FlaskForm):
 	submit = SubmitField('Close Election')
+
+class VerifyVoteForm(FlaskForm):
+	vote_exists = SubmitField('My Vote Is Here')
+	vote_not_exists = SubmitField('My Vote Is Not Here')
