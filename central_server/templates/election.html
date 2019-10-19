@@ -27,7 +27,7 @@
           {% else %}
             Winners:
             <ul>
-              {% for winner in winners %}
+              {% for winner in winners[0] %}
                 <li>{{ winner.User.email }}</li>
               {% endfor %}
             </ul>
@@ -38,12 +38,16 @@
   </div>
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#CandidateModal">Show Candidates</button>
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#VoterModal">Show Voters</button>
-  <button type="button" class="btn btn-primary" onclick=VerifyResult()>Verify</button>
+  {% if election.ended %}
+    <button type="button" class="btn btn-primary" onclick=VerifyResult()>Verify</button>
+  {% endif %}
   <br>
+  {% if election.ended %}
   <br>
   <p>
     Percent of votes verified: {{ percent_verified }}%
   </p>
+  {% endif %}
   {% if election.ended and user_voted and not user_voted.verified %}
     <form method="POST", action="">
       {{ verify_vote_form.hidden_tag() }}
@@ -81,7 +85,7 @@
   	  <tbody>
         {% for fingerprint in votes.items() %}
       		<tr>
-      			<td style="word-wrap">{{ fingerprint[0] }}</td>
+      			<td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">{{ fingerprint[0] }}</td>
             {% for vote in fingerprint[1].items() %}
       			   <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">{{ vote[1] }}</td>
             {% endfor %}
@@ -117,7 +121,7 @@
       tally_cand = new BigInteger(tally[candidate]);
       nonce_cand = new BigInteger(nonces[candidate])
       encrypted = pub.encryptWithNonce(nbv(votes_cand), nonce_cand);
-      if (encrypted.toString() != tally_cand)
+      if (encrypted.toString() != tally_cand.toString())
       {
         valid = false;
       }

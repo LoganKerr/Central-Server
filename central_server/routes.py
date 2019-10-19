@@ -9,6 +9,7 @@ import secrets
 from collections import defaultdict
 from phe import paillier
 from Naked.toolshed.shell import execute_js, muterun_js
+import random
 
 @app.route("/")
 @login_required
@@ -161,7 +162,8 @@ def election():
 	organizer = User.query.filter_by(id=election.organizer_id).first()
 	candidates = db.session.query(Candidate, User).filter_by(election_id=election.id).join(User, User.id == Candidate.user_id).all()
 	voters = db.session.query(Voter, User).filter_by(election_id=election.id).join(User, User.id == Voter.user_id).all()
-	vm = VotingMachine.query.filter_by(status=True).first()
+	vms = VotingMachine.query.filter_by(status=True).all()
+	vm = random.choice(vms)
 	voting_link = "#"
 	if vm != None:
 		voting_link = "http://localhost:"+str(vm.port)+"/vote/"
@@ -197,7 +199,8 @@ def election():
 			public_key = paillier.PaillierPublicKey(int(election.public_key))
 			private_key = paillier.PaillierPrivateKey(public_key, int(election.private_key_p), int(election.private_key_q))
 			for candidate in candidates:
-				nonces[candidate.Candidate.id] *= data_dict['nonce_product'][candidate.Candidate.id] 
+				nonces[candidate.Candidate.id] *= data_dict['nonce_product'][candidate.Candidate.id]
+				print(data_dict['votes']) 
 				for fingerprint in data_dict['votes']:
 					ciphertext = int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)])
 					tally[candidate.Candidate.id] += paillier.EncryptedNumber(public_key, int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)]), 0)
