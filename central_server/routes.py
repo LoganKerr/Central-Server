@@ -10,6 +10,8 @@ from collections import defaultdict
 from phe import paillier
 from Naked.toolshed.shell import execute_js, muterun_js
 import random
+from fractions import gcd
+import gmpy2
 
 @app.route("/")
 @login_required
@@ -172,6 +174,7 @@ def election():
 	ciphertexts = defaultdict(lambda: 1)
 	nonces = defaultdict(lambda: 1)
 	tally = defaultdict(lambda: 1)
+	lam = lcm(int(election.private_key_p)-1, int(election.private_key_q)-1)
 	candidate_dict = []
 	winners = []
 	num_votes = 0
@@ -199,13 +202,13 @@ def election():
 			public_key = paillier.PaillierPublicKey(int(election.public_key))
 			private_key = paillier.PaillierPrivateKey(public_key, int(election.private_key_p), int(election.private_key_q))
 			for candidate in candidates:
-				nonces[candidate.Candidate.id] *= data_dict['nonce_product'][candidate.Candidate.id]
-				print(data_dict['votes']) 
 				for fingerprint in data_dict['votes']:
 					ciphertext = int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)])
 					tally[candidate.Candidate.id] += paillier.EncryptedNumber(public_key, int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)]), 0)
 				candidate.Candidate.votes = private_key.decrypt(tally[candidate.Candidate.id])
 				db.session.add(candidate.Candidate)
+				# Calculate nonce for each candidate tally
+				nonces[candidate.Candidate.id] = compute_nonce(candidate.Candidate.votes, tally[candidate.Candidate.id].ciphertext(False), int(election.public_key), int(election.public_key) + 1, lam)
 			election.ended = True
 			db.session.add(election)
 			db.session.commit()
@@ -243,11 +246,13 @@ def election():
 		tally = defaultdict(lambda: 0)
 		public_key = paillier.PaillierPublicKey(int(election.public_key))
 		private_key = paillier.PaillierPrivateKey(public_key, int(election.private_key_p), int(election.private_key_q))
-		for candidate in candidates:
-			nonces[candidate.Candidate.id] *= data_dict['nonce_product'][candidate.Candidate.id] 
+		for candidate in candidates: 
 			for fingerprint in data_dict['votes']:
 				#print ("VOTE: ", data_dict['votes'][fingerprint])
-				tally[candidate.Candidate.id] += paillier.EncryptedNumber(public_key, int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)]))		
+				tally[candidate.Candidate.id] += paillier.EncryptedNumber(public_key, int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)]))
+			# Calculate nonce for each candidate tally
+			nonces[candidate.Candidate.id] = compute_nonce(candidate.Candidate.votes, tally[candidate.Candidate.id].ciphertext(False), int(election.public_key), int(election.public_key) + 1, lam)
+			#print(data_dict['nonce_product'][candidate.Candidate.id])
 
 		voted_voters = Voter.query.filter_by(election_id=election.id).filter_by(voted=True).all()
 		ax = 0
@@ -270,17 +275,38 @@ def get_all_votes(election):
 	voting_machines = VotingMachine.query.all()
 	for machine in voting_machines:
 		mach_data_dict = get_votes_from(machine.port, election.id)
-		for candidate in mach_data_dict['nonce_product']:
-			data_dict['nonce_product'][int(candidate)] *= mach_data_dict['nonce_product'][candidate]
 		for fingerprint in mach_data_dict['votes']:
 			data_dict['votes'][fingerprint] = mach_data_dict['votes'][fingerprint]
 	return data_dict
+
+def lcm(a, b):
+   return a*b // gcd(a,b)
+
+def getInverse(m, n):
+	return gmpy2.invert(m, n);
+
+def modDiv(a, b, n):
+	return gmpy2.divm(a, b, n);
+
+def compute_nonce(m, c, n, g, lamda):
+	#print("COMPUTE NONCE")
+	n_sq = n * n
+	pow1 = pow(g, m, n_sq)
+	#print("pow1: ",pow1)
+	pow2 = modDiv(c, pow1, n_sq)
+	#print("pow2", pow2)
+	#if pow2==0:
+		#print("ERROR: there is no solution for computeR(m,n,g,c): ", m, n, g,c)
+	invN = getInverse(n, lamda)
+	#print("invN: ", invN)
+	r = pow(pow2, invN, n)
+	#print("r: ",r)
+	return r
 
 def get_votes_from(port, election_id):
 	votes = {}
 	try:
 		response = requests.get("http://localhost:"+str(port)+"/get_votes/?election_id="+str(election_id))
-		print(response)
 		votes = response.json()
 	except requests.exceptions.RequestException as e:
 		print(e)
