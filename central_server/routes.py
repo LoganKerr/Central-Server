@@ -148,13 +148,6 @@ def create_election():
 @app.route("/election/", methods=['GET', 'POST'])
 @login_required
 def election():
-
-	#response = execute_js('central_server/static/js/paillier.js', "test2 512")
-	#print(response.stdout)
-	#print(jsonify(public_key))
-	#print(jsonify(private_key))
-	#response = execute_js('central_server/static/js/paillier.js', "test3 128 5 "+str(public_key.n))
-
 	verify_vote_form = None;
 	id = request.args.get("id")
 	election = Election.query.filter_by(id=id).first()
@@ -174,7 +167,6 @@ def election():
 	ciphertexts = defaultdict(lambda: 1)
 	nonces = defaultdict(lambda: 1)
 	tally = defaultdict(lambda: 1)
-	lam = lcm(int(election.private_key_p)-1, int(election.private_key_q)-1)
 	candidate_dict = []
 	winners = []
 	num_votes = 0
@@ -191,8 +183,13 @@ def election():
 			db.session.add(election)
 			db.session.commit()
 			flash("Election is now open", "success")
-	if form_type == "close" and close_form.validate_on_submit():
-		election = Election.query.filter_by(id=election.id).filter_by(organizer_id=current_user.get_id()).first()
+
+	if (form_type == "close" and close_form.validate_on_submit()) or election.ended:
+		closing = False
+		lam = lcm(int(election.private_key_p)-1, int(election.private_key_q)-1)
+		if form_type == "close" and close_form.validate_on_submit():
+			closing = True
+			election = Election.query.filter_by(id=election.id).filter_by(organizer_id=current_user.get_id()).first()
 		if election != None:
 			data_dict = {'nonce_product': defaultdict(lambda: 1), 'votes': defaultdict(dict)}
 			data_dict = get_all_votes(election)
@@ -201,72 +198,56 @@ def election():
 			tally = defaultdict(lambda: 0)
 			public_key = paillier.PaillierPublicKey(int(election.public_key))
 			private_key = paillier.PaillierPrivateKey(public_key, int(election.private_key_p), int(election.private_key_q))
-			for candidate in candidates:
+
+			for candidate in candidates: 
 				for fingerprint in data_dict['votes']:
-					ciphertext = int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)])
-					tally[candidate.Candidate.id] += paillier.EncryptedNumber(public_key, int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)]), 0)
-				candidate.Candidate.votes = private_key.decrypt(tally[candidate.Candidate.id])
-				db.session.add(candidate.Candidate)
-				# Calculate nonce for each candidate tally
+					tally[candidate.Candidate.id] += paillier.EncryptedNumber(public_key, int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)]))
+				if closing:
+					candidate.Candidate.votes = private_key.decrypt(tally[candidate.Candidate.id])
+					db.session.add(candidate.Candidate)
 				nonces[candidate.Candidate.id] = compute_nonce(candidate.Candidate.votes, tally[candidate.Candidate.id].ciphertext(False), int(election.public_key), int(election.public_key) + 1, lam)
-			election.ended = True
-			db.session.add(election)
+			if closing:
+				election.ended = True
+				db.session.add(election)
+				flash("Election is now closed", "success")
 			db.session.commit()
-			flash("Election is now closed", "success")
-	if election.ended:
-		verify_vote_form = VerifyVoteForm()
-		if form_type == "verify" and verify_vote_form.validate_on_submit():
-			temp_election_id = int(request.form.get("election"))
-			temp_user_id = int(request.form.get("user"))
-			temp_voter_id = int(request.form.get("voter"))
-			temp_auth_token = request.form.get("authentication_token")
-			temp_voter = Voter.query.filter_by(id=temp_voter_id).filter_by(election_id=temp_election_id).filter_by(user_id=temp_user_id).filter_by(authentication_token=temp_auth_token).filter_by(voted=True).filter_by(verified=False).first()
-			if (temp_voter != None):
-				temp_voter.verified=True
-				if request.form.get("vote_exists"):
-					temp_voter.vote_exists=True
-				db.session.add(temp_voter)
-				db.session.commit()
-		user_voted = Voter.query.filter_by(election_id=election.id).filter_by(voted=True).filter_by(user_id=current_user.id).first()
-		if (user_voted != None and user_voted.verified == False):
-			flash("Please verify if you see your vote", "info")
-		num_votes = 0
-		max_votes = 0
-		for candidate in candidates:
-			num_votes += candidate.Candidate.votes
-			if candidate.Candidate.votes > max_votes:
-				max_votes = candidate.Candidate.votes
-		for candidate in candidates:
-			if candidate.Candidate.votes == max_votes:
-				winners.append(candidates)
-		data_dict = {'nonce_product': defaultdict(lambda: 1), 'votes': defaultdict(dict)}
-		data_dict = get_all_votes(election)
-		nonces = defaultdict(lambda: 1)
-		ciphertexts = data_dict['votes']
-		tally = defaultdict(lambda: 0)
-		public_key = paillier.PaillierPublicKey(int(election.public_key))
-		private_key = paillier.PaillierPrivateKey(public_key, int(election.private_key_p), int(election.private_key_q))
-		for candidate in candidates: 
-			for fingerprint in data_dict['votes']:
-				#print ("VOTE: ", data_dict['votes'][fingerprint])
-				tally[candidate.Candidate.id] += paillier.EncryptedNumber(public_key, int(data_dict['votes'][fingerprint][str(candidate.Candidate.id)]))
-			# Calculate nonce for each candidate tally
-			nonces[candidate.Candidate.id] = compute_nonce(candidate.Candidate.votes, tally[candidate.Candidate.id].ciphertext(False), int(election.public_key), int(election.public_key) + 1, lam)
-			#print(data_dict['nonce_product'][candidate.Candidate.id])
-
-		voted_voters = Voter.query.filter_by(election_id=election.id).filter_by(voted=True).all()
-		ax = 0
-		max = num_votes
-		for voter in voted_voters:
-			if voter.verified==True and voter.vote_exists==True:
-				ax+=1
-		percent_verified = ax * 100 / max
-		if (num_votes != len(voted_voters)):
-			flash("Warning: Number of votes cast does not match number of voters who voted", "danger")
-
-		nonces=nonces_to_dict(nonces)
-		tally=encrypted_numbers_to_dict(tally)
-		candidate_dict=candidates_to_dict(candidates)
+			verify_vote_form = VerifyVoteForm()
+			if form_type == "verify" and verify_vote_form.validate_on_submit():
+				temp_election_id = int(request.form.get("election"))
+				temp_user_id = int(request.form.get("user"))
+				temp_voter_id = int(request.form.get("voter"))
+				temp_auth_token = request.form.get("authentication_token")
+				temp_voter = Voter.query.filter_by(id=temp_voter_id).filter_by(election_id=temp_election_id).filter_by(user_id=temp_user_id).filter_by(authentication_token=temp_auth_token).filter_by(voted=True).filter_by(verified=False).first()
+				if (temp_voter != None):
+					temp_voter.verified=True
+					if request.form.get("vote_exists"):
+						temp_voter.vote_exists=True
+					db.session.add(temp_voter)
+					db.session.commit()
+			user_voted = Voter.query.filter_by(election_id=election.id).filter_by(voted=True).filter_by(user_id=current_user.id).first()
+			if (user_voted != None and user_voted.verified == False):
+				flash("Please verify if you see your vote", "info")
+			num_votes = 0
+			max_votes = 0
+			for candidate in candidates:
+				num_votes += candidate.Candidate.votes
+				if candidate.Candidate.votes > max_votes:
+					max_votes = candidate.Candidate.votes
+			for candidate in candidates:
+				if candidate.Candidate.votes == max_votes:
+					winners.append(candidates)
+			voted_voters = Voter.query.filter_by(election_id=election.id).filter_by(voted=True).all()
+			ax = 0
+			max = num_votes
+			for voter in voted_voters:
+				if voter.verified==True and voter.vote_exists==True:
+					ax+=1
+			percent_verified = ax * 100 / max
+			if (num_votes != len(voted_voters)):
+				flash("Warning: Number of votes cast does not match number of voters who voted", "danger")
+			nonces=nonces_to_dict(nonces)
+			tally=encrypted_numbers_to_dict(tally)
+			candidate_dict=candidates_to_dict(candidates)
 	return render_template('election.html', election=election, organizer=organizer, candidates=candidates, voters=voters, open_form=open_form, close_form=close_form, voting_link=voting_link, votes=ciphertexts, nonces=nonces, tally=tally, candidate_dict=candidate_dict, winners=winners, num_votes=num_votes, user_voted=user_voted, percent_verified=percent_verified, verify_vote_form=verify_vote_form)
 
 def get_all_votes(election):
@@ -289,18 +270,13 @@ def modDiv(a, b, n):
 	return gmpy2.divm(a, b, n);
 
 def compute_nonce(m, c, n, g, lamda):
-	#print("COMPUTE NONCE")
 	n_sq = n * n
 	pow1 = pow(g, m, n_sq)
-	#print("pow1: ",pow1)
 	pow2 = modDiv(c, pow1, n_sq)
-	#print("pow2", pow2)
-	#if pow2==0:
-		#print("ERROR: there is no solution for computeR(m,n,g,c): ", m, n, g,c)
+	if pow2==0:
+		print("ERROR: there is no solution for computeR(m,n,g,c): ", m, n, g,c)
 	invN = getInverse(n, lamda)
-	#print("invN: ", invN)
 	r = pow(pow2, invN, n)
-	#print("r: ",r)
 	return r
 
 def get_votes_from(port, election_id):
