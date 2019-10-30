@@ -122,7 +122,7 @@ def getStatusOfVM(port):
 def create_election():
 	form = CreateElectionForm()
 	if form.validate_on_submit():
-		public_key, private_key = paillier.generate_paillier_keypair()
+		public_key, private_key = paillier.generate_paillier_keypair(n_length=128)
 		election = Election(title=form.title.data, organizer_id=current_user.get_id(), public_key=str(public_key.n), private_key_p=str(private_key.p), private_key_q=str(private_key.q))
 		db.session.add(election)
 #		user_1 = User.query.filter_by(email=form.candidate_1.data).first()
