@@ -158,12 +158,16 @@ def election():
 	candidates = db.session.query(Candidate, User).filter_by(election_id=election.id).join(User, User.id == Candidate.user_id).all()
 	voters = db.session.query(Voter, User).filter_by(election_id=election.id).join(User, User.id == Voter.user_id).all()
 	vms = VotingMachine.query.filter_by(status=True).all()
+	if (vms == []):
+		flash("No voting machines online", "danger")
+		return redirect(url_for('home'))
 	vm = random.choice(vms)
 	voting_link = "#"
 	if vm != None:
 		voting_link = "http://localhost:"+str(vm.port)+"/vote/"
 	else:
 		flash("No voting machines online", "danger")
+		return redirect(url_for('home'))
 	ciphertexts = defaultdict(lambda: 1)
 	nonces = defaultdict(lambda: 1)
 	tally = defaultdict(lambda: 1)
@@ -244,7 +248,7 @@ def election():
 					ax+=1
 			percent_verified = ax * 100 / max
 			if (num_votes != len(voted_voters)):
-				flash("Warning: Number of votes cast does not match number of voters who voted", "danger")
+				flash("Warning: More votes received than expected", "danger")
 			nonces=nonces_to_dict(nonces)
 			tally=encrypted_numbers_to_dict(tally)
 			candidate_dict=candidates_to_dict(candidates)
@@ -253,7 +257,7 @@ def election():
 def get_all_votes(election):
 	data_dict = {'nonce_product': defaultdict(lambda: 1), 'votes': defaultdict(dict)}
 	mach_data_dict = {}
-	voting_machines = VotingMachine.query.all()
+	voting_machines = VotingMachine.query.filter_by(status=True).all()
 	for machine in voting_machines:
 		mach_data_dict = get_votes_from(machine.port, election.id)
 		for fingerprint in mach_data_dict['votes']:

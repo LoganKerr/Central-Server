@@ -21,25 +21,26 @@
 		  		{{ open_form.hidden_tag() }}
 		  		<input type="hidden" name="type" value="open"/>
 		  		{{ open_form.submit(class="btn btn-outline-info") }}
-        {% elif election.ended %}
-          {% if winners|length == 1 %}
-            Winner: {{ winners[0][0].User.email }}
-          {% else %}
-            Winners:
-            <ul>
-              {% for winner in winners[0] %}
-                <li>{{ winner.User.email }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
         {% endif %}
 	  	</form>
   	{% endif %}
+    {% if election.ended %}
+      {% if winners|length == 1 %}
+          Winner: {{ winners[0][0].User.email }}
+      {% else %}
+        Winners:
+        <ul>
+          {% for winner in winners[0] %}
+            <li>{{ winner.User.email }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endif %}
   </div>
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#CandidateModal">Show Candidates</button>
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#VoterModal">Show Voters</button>
   {% if election.ended %}
-    <button type="button" class="btn btn-primary" onclick=VerifyResult()>Verify</button>
+    <button type="button" class="btn btn-success" style="float: right" onclick=VerifyResult()>Verify Result</button>
   {% endif %}
   <br>
   {% if election.ended %}
@@ -78,7 +79,7 @@
   	    <tr>
   	      <th scope="col">Fingerprint</th>
           {% for candidate in candidates %}
-  	         <th scope="col">{{ candidate.User.email }}</th>
+  	         <th id="email-{{ candidate.Candidate.id }}" scope="col">{{ candidate.User.email }}</th>
           {% endfor %}
   	    </tr>
   	  </thead>
@@ -112,11 +113,13 @@
   numBits = 128;
   function VerifyResult()
   {
+    alert_str = "";
     valid = true
     n = new BigInteger(n_str);
     pub = new paillier.publicKey(numBits, n);
     for (candidate in candidates)
     {
+      candidate_email = document.getElementById("email-"+candidate).textContent;
       votes_cand = candidates[candidate]
       tally_cand = new BigInteger(tally[candidate]);
       nonce_cand = new BigInteger(nonces[candidate])
@@ -124,16 +127,22 @@
       if (encrypted.toString() != tally_cand.toString())
       {
         valid = false;
+        alert_str+="Tally for "+candidate_email+" NOT verified\n"
+      }
+      else
+      {
+        alert_str+="Tally for "+candidate_email+" verified\n"
       }
     }
     if (valid)
     {
-      alert("Published results are valid");
+      alert_str+="\nResult correctly matches tally";
     }
     else
     {
-      alert("ERROR: Published results are not valid");
+      alert_str+="\nWARNING: Result does not match tally";
     }
+    alert(alert_str);
   }
 </script>
 
